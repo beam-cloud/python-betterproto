@@ -33,6 +33,8 @@ from pydantic import {% for i in output_file.pydantic_imports|sort %}{{ i }}{% i
 import betterproto
 {% if output_file.services %}
 from betterproto.grpc.grpclib_server import ServiceBase
+{% endif %}
+{% if output_file.services and output_file.parent_request.options.grpc_kind == "grpclib" %}
 import grpclib
 {% endif %}
 
@@ -102,6 +104,9 @@ class {{ message.py_name }}(betterproto.Message):
     {%  endif %}
 
 {% endfor %}
+
+{% if output_file.parent_request.options.grpc_kind == "grpclib" %}
+
 {% for service in output_file.services %}
 class {{ service.py_name }}Stub(betterproto.ServiceStub):
     {% if service.comment %}
@@ -246,6 +251,7 @@ class {{ service.py_name }}Base(ServiceBase):
         }
 
 {% endfor %}
+{% endif %}
 
 {% if output_file.pydantic_dataclasses %}
 {% for message in output_file.messages %}

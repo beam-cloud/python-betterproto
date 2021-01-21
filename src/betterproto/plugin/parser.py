@@ -28,6 +28,7 @@ from .models import (
     FieldCompiler,
     MapEntryCompiler,
     MessageCompiler,
+    Options,
     OneOfFieldCompiler,
     OutputTemplate,
     PluginRequestCompiler,
@@ -37,7 +38,6 @@ from .models import (
     is_map,
     is_oneof,
 )
-
 
 def traverse(
     proto_file: FileDescriptorProto,
@@ -66,6 +66,12 @@ def traverse(
     yield from _traverse([5], proto_file.enum_type)
     yield from _traverse([4], proto_file.message_type)
 
+def parse_options(plugin_options: List[str]) -> Options:
+    options = Options()
+    for option in plugin_options:
+        if option.startswith("grpc="):
+            options.grpc_kind = option.split("=", 1)[1]
+    return options
 
 def generate_code(request: CodeGeneratorRequest) -> CodeGeneratorResponse:
     response = CodeGeneratorResponse()
@@ -73,7 +79,12 @@ def generate_code(request: CodeGeneratorRequest) -> CodeGeneratorResponse:
     plugin_options = request.parameter.split(",") if request.parameter else []
     response.supported_features = CodeGeneratorResponseFeature.FEATURE_PROTO3_OPTIONAL
 
-    request_data = PluginRequestCompiler(plugin_request_obj=request)
+    options = parse_options(plugin_options)
+
+    request_data = PluginRequestCompiler(
+        plugin_request_obj=request,
+        options=options
+    )
     # Gather output packages
     for proto_file in request.proto_file:
         output_package_name = proto_file.package
