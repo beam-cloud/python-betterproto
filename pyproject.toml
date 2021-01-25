@@ -50,7 +50,7 @@ protoc-gen-python_betterproto = "betterproto.plugin:main"
 [tool.poetry.extras]
 compiler = ["black", "isort", "jinja2"]
 rust-codec = ["betterproto-rust-codec"]
-
+grpcio = ["grpcio"]
 
 # Dev workflow tasks
 
