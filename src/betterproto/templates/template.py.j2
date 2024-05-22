@@ -263,6 +263,8 @@ class {{ service.py_name }}Base(ServiceBase):
 {{ message.py_name }}.__pydantic_model__.update_forward_refs()  # type: ignore
 {% endif %}
 
+
+
 {% if output_file.parent_request.options.grpc_kind == "grpcio" %}
 {% for service in output_file.services %}
 class {{ service.py_name }}Base(ServicerBase):
@@ -319,5 +321,7 @@ class {{ service.py_name }}Base(ServicerBase):
 
 {% for i in output_file.imports|sort %}
 {{ i }}
+{% endfor %}
+
 {% endfor %}
 {% endif %}

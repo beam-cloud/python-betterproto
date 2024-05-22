@@ -12,7 +12,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 black = { version = ">=23.1.0", optional = true }
 grpclib = "^0.4.1"
 importlib-metadata = { version = ">=1.6.0", python = "<3.8" }
