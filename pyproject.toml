@@ -21,6 +21,7 @@ python-dateutil = "^2.8"
 isort = {version = "^5.11.5", optional = true}
 typing-extensions = "^4.7.1"
 betterproto-rust-codec = { version = "0.1.1", optional = true }
+grpcio = "^1.64.0"
 
 [tool.poetry.group.dev.dependencies]
 asv = "^0.4.2"

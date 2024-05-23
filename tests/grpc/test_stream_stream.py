@@ -5,7 +5,7 @@ from typing import AsyncIterator
 import pytest
 
 import betterproto
-from betterproto.grpc.util.async_channel import AsyncChannel
+from betterproto.grpcstub.util.async_channel import AsyncChannel
 
 
 @dataclass

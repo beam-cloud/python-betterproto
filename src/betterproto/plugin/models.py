@@ -212,6 +212,7 @@ class ProtoContentBase:
 @dataclass
 class Options:
     grpc_kind: str = "grpclib"
+    grpc_kind: str = "grpcio"
     include_google: bool = False
 
 
@@ -749,12 +750,13 @@ class ServiceMethodCompiler(ProtoContentBase):
         # Required by both client and server
         if self.client_streaming or self.server_streaming:
             self.output_file.typing_imports.add("AsyncIterator")
+            self.output_file.typing_imports.add("Iterator")
 
         # add imports required for request arguments timeout, deadline and metadata
         self.output_file.typing_imports.add("Optional")
         self.output_file.imports_type_checking_only.add("import grpclib.server")
         self.output_file.imports_type_checking_only.add(
-            "from betterproto.grpc.grpclib_client import MetadataLike"
+            "from betterproto.grpcstub.grpclib_client import MetadataLike"
         )
         self.output_file.imports_type_checking_only.add(
             "from grpclib.metadata import Deadline"

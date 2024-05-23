@@ -49,12 +49,12 @@ from .casing import (
     snake_case,
 )
 from .enum import Enum as Enum
-from .grpc.grpclib_client import ServiceStub as ServiceStub
+from .grpcstub.grpcio_client import SyncServiceStub as SyncServiceStub
+from .grpcstub.grpclib_client import ServiceStub as ServiceStub
 from .utils import (
     classproperty,
     hybridmethod,
 )
-
 
 if TYPE_CHECKING:
     from _typeshed import (

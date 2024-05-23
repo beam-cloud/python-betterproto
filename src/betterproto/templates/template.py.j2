@@ -32,14 +32,14 @@ from pydantic import {% for i in output_file.pydantic_imports|sort %}{{ i }}{% i
 
 import betterproto
 {% if output_file.services %}
-from betterproto.grpc.grpclib_server import ServiceBase
+from betterproto.grpcstub.grpclib_server import ServiceBase
 {% endif %}
 {% if output_file.services and output_file.parent_request.options.grpc_kind == "grpclib" %}
 import grpclib
 {% endif %}
 {% if output_file.services and output_file.parent_request.options.grpc_kind == "grpcio" %}
 import grpc
-from betterproto.grpc.grpcio_server import ServicerBase
+from betterproto.grpcstub.grpcio_client import SyncServiceStub
 {% endif %}
 
 {% for i in output_file.imports|sort %}
@@ -262,66 +262,88 @@ class {{ service.py_name }}Base(ServiceBase):
 {% if message.has_message_field %}
 {{ message.py_name }}.__pydantic_model__.update_forward_refs()  # type: ignore
 {% endif %}
+{% endfor %}
+{% endif %}
 
 
-
+{# GRPCIO #}
 {% if output_file.parent_request.options.grpc_kind == "grpcio" %}
 {% for service in output_file.services %}
-class {{ service.py_name }}Base(ServicerBase):
+class {{ service.py_name }}Stub(SyncServiceStub):
     {% if service.comment %}
 {{ service.comment }}
 
+    {% elif not service.methods %}
+    pass
     {% endif %}
-
     {% for method in service.methods %}
-    async def {{ method.py_name }}(self
+    def {{ method.py_name }}(self
         {%- if not method.client_streaming -%}
-            , request: "{{ method.py_input_message_type }}"
+            {%- if method.py_input_message -%}, {{ method.py_input_message_param }}: "{{ method.py_input_message_type }}"{%- endif -%}
         {%- else -%}
             {# Client streaming: need a request iterator instead #}
-            , request_iterator: AsyncIterator["{{ method.py_input_message_type }}"]
+            , {{ method.py_input_message_param }}_iterator: Union[Iterable["{{ method.py_input_message_type }}"], Iterable["{{ method.py_input_message_type }}"]]
         {%- endif -%}
-            , context: grpc.aio.ServicerContext
-            ) -> {% if method.server_streaming %}AsyncGenerator["{{ method.py_output_message_type }}", None]{% else %}"{{ method.py_output_message_type }}"{% endif %}:
+            ) -> {% if method.server_streaming %}Iterator["{{ method.py_output_message_type }}"]{% else %}"{{ method.py_output_message_type }}"{% endif %}:
         {% if method.comment %}
 {{ method.comment }}
 
         {% endif %}
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        {% if method.server_streaming %}
+            {% if method.client_streaming %}
+        for response in self._stream_stream(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )({{ method.py_input_message_param }}_iterator):
+            yield response
+            {% else %}{# i.e. not client streaming #}
+        for response in self._unary_stream(
+            "{{ method.route }}",
+            {{ method.py_input_message_param }},
+            {{ method.py_output_message_type.strip('"') }},
+        )(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        ):
+            yield response
+
+            {% endif %}{# if client streaming #}
+        {% else %}{# i.e. not server streaming #}
+            {% if method.client_streaming %}
+        return self._stream_unary(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        )
+            {% else %}{# i.e. not client streaming #}
+        return self._unary_unary(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        )
+            {% endif %}{# client streaming #}
+        {% endif %}
 
     {% endfor %}
-
-    __proto_path__ = "{{ service.proto_path }}"
-
-    @property
-    def __rpc_methods__(self):
-        return {
-        {% for method in service.methods %}
-            "{{ method.proto_name }}":
-            {% if not method.client_streaming and not method.server_streaming %}
-                grpc.unary_unary_rpc_method_handler(
-            {% elif method.client_streaming and method.server_streaming %}
-                grpc.stream_stream_rpc_method_handler(
-            {% elif method.client_streaming %}
-                grpc.stream_unary_rpc_method_handler(
-            {% else %}
-                grpc.unary_stream_rpc_method_handler(
-            {% endif %}
-                    self.{{ method.py_name }},
-                    request_deserializer={{ method.py_input_message_type }}.FromString,
-                    response_serializer={{ method.py_input_message_type }}.SerializeToString,
-                ),
-        {% endfor %}
-        }
-
-{% endfor %}
-{% endif %}
-
-{% for i in output_file.imports|sort %}
-{{ i }}
 {% endfor %}
 
-{% endfor %}
 {% endif %}

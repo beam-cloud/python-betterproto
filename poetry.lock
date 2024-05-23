@@ -508,8 +508,11 @@ name = "docutils"
 version = "0.20.1"
 description = "Docutils -- Python Documentation Utilities"
 optional = false
-python-versions = "*"
-files = []
+python-versions = ">=3.7"
+files = [
+    {file = "docutils-0.20.1-py3-none-any.whl", hash = "sha256:96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6"},
+    {file = "docutils-0.20.1.tar.gz", hash = "sha256:f08a4e276c3a1583a86dce3e34aba3fe04d02bba2dd51ed16106244e8a923e3b"},
+]
 
 [[package]]
 name = "filelock"
@@ -1797,10 +1800,10 @@ files = [
 
 [extras]
 compiler = ["black", "isort", "jinja2"]
-grpcio = []
+grpcio = ["grpcio"]
 rust-codec = ["betterproto-rust-codec"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "f1973028a6bd17e5e94d678cbb7cef04181244eb238652f2e8d8a21cf73f2870"
+content-hash = "81e5ff43f5a74f70c68461265e294e0f938247be3857c2dc25d14123f3966aea"

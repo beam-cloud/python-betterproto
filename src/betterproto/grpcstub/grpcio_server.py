@@ -2,7 +2,7 @@ from typing import Dict, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 if TYPE_CHECKING:
-    import grpc
+    import grpcstub
 
 
 class ServicerBase(ABC):
@@ -12,7 +12,7 @@ class ServicerBase(ABC):
 
     @property
     @abstractmethod
-    def __rpc_methods__(self) -> Dict[str, "grpc.RpcMethodHandler"]:
+    def __rpc_methods__(self) -> Dict[str, "grpcstub.RpcMethodHandler"]:
         ...
 
     @property
@@ -21,8 +21,8 @@ class ServicerBase(ABC):
         ...
 
 
-def register_servicers(server: "grpc.aio.Server", *servicers: ServicerBase):
-    from grpc import method_handlers_generic_handler
+def register_servicers(server: "grpcstub.aio.Server", *servicers: ServicerBase):
+    from grpcstub import method_handlers_generic_handler
 
     server.add_generic_rpc_handlers(
         tuple(
