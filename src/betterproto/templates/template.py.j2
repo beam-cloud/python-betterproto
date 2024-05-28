@@ -32,8 +32,14 @@ from pydantic import {% for i in output_file.pydantic_imports|sort %}{{ i }}{% i
 
 import betterproto
 {% if output_file.services %}
-from betterproto.grpc.grpclib_server import ServiceBase
+from betterproto.grpcstub.grpclib_server import ServiceBase
+{% endif %}
+{% if output_file.services and output_file.parent_request.options.grpc_kind == "grpclib" %}
 import grpclib
+{% endif %}
+{% if output_file.services and output_file.parent_request.options.grpc_kind == "grpcio" %}
+import grpc
+from betterproto.grpcstub.grpcio_client import SyncServiceStub
 {% endif %}
 
 {% for i in output_file.imports|sort %}
@@ -102,6 +108,9 @@ class {{ message.py_name }}(betterproto.Message):
     {%  endif %}
 
 {% endfor %}
+
+{% if output_file.parent_request.options.grpc_kind == "grpclib" %}
+
 {% for service in output_file.services %}
 class {{ service.py_name }}Stub(betterproto.ServiceStub):
     {% if service.comment %}
@@ -246,6 +255,7 @@ class {{ service.py_name }}Base(ServiceBase):
         }
 
 {% endfor %}
+{% endif %}
 
 {% if output_file.pydantic_dataclasses %}
 {% for message in output_file.messages %}
@@ -253,4 +263,87 @@ class {{ service.py_name }}Base(ServiceBase):
 {{ message.py_name }}.__pydantic_model__.update_forward_refs()  # type: ignore
 {% endif %}
 {% endfor %}
+{% endif %}
+
+
+{# GRPCIO #}
+{% if output_file.parent_request.options.grpc_kind == "grpcio" %}
+{% for service in output_file.services %}
+class {{ service.py_name }}Stub(SyncServiceStub):
+    {% if service.comment %}
+{{ service.comment }}
+
+    {% elif not service.methods %}
+    pass
+    {% endif %}
+    {% for method in service.methods %}
+    def {{ method.py_name }}(self
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}, {{ method.py_input_message_param }}: "{{ method.py_input_message_type }}"{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            , {{ method.py_input_message_param }}_iterator: Iterable["{{ method.py_input_message_type }}"]
+        {%- endif -%}
+            ) -> {% if method.server_streaming %}Iterator["{{ method.py_output_message_type }}"]{% else %}"{{ method.py_output_message_type }}"{% endif %}:
+        {% if method.comment %}
+{{ method.comment }}
+
+        {% endif %}
+        {% if method.server_streaming %}
+            {% if method.client_streaming %}
+        for response in self._stream_stream(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )({{ method.py_input_message_param }}_iterator):
+            yield response
+            {% else %}{# i.e. not client streaming #}
+        for response in self._unary_stream(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        ):
+            yield response
+
+            {% endif %}{# if client streaming #}
+        {% else %}{# i.e. not server streaming #}
+            {% if method.client_streaming %}
+        return self._stream_unary(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        ).future(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        ).result()
+            {% else %}{# i.e. not client streaming #}
+        return self._unary_unary(
+            "{{ method.route }}",
+            {{ method.py_input_message_type }},
+            {{ method.py_output_message_type.strip('"') }},
+        )(
+        {%- if not method.client_streaming -%}
+            {%- if method.py_input_message -%}{{ method.py_input_message_param }}{%- endif -%}
+        {%- else -%}
+            {# Client streaming: need a request iterator instead #}
+            {{ method.py_input_message_param }}_iterator
+        {%- endif -%}
+        )
+            {% endif %}{# client streaming #}
+        {% endif %}
+
+    {% endfor %}
+{% endfor %}
+
 {% endif %}

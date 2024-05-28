@@ -28,6 +28,7 @@ from .models import (
     FieldCompiler,
     MapEntryCompiler,
     MessageCompiler,
+    Options,
     OneOfFieldCompiler,
     OutputTemplate,
     PluginRequestCompiler,
@@ -67,15 +68,33 @@ def traverse(
     yield from _traverse([4], proto_file.message_type)
 
 
+def parse_options(plugin_options: List[str]) -> Options:
+    options = Options()
+    for option in plugin_options:
+        if option.startswith("grpc="):
+            options.grpc_kind = option.split("=", 1)[1]
+        if option == "INCLUDE_GOOGLE":
+            options.include_google = True
+    return options
+
 def generate_code(request: CodeGeneratorRequest) -> CodeGeneratorResponse:
     response = CodeGeneratorResponse()
 
     plugin_options = request.parameter.split(",") if request.parameter else []
     response.supported_features = CodeGeneratorResponseFeature.FEATURE_PROTO3_OPTIONAL
 
-    request_data = PluginRequestCompiler(plugin_request_obj=request)
+    options = parse_options(plugin_options)
+
+    request_data = PluginRequestCompiler(
+        plugin_request_obj=request, options=options
+    )
     # Gather output packages
     for proto_file in request.proto_file:
+        if proto_file.package == "google.protobuf" and options.include_google:
+            # If not INCLUDE_GOOGLE,
+            # skip re-compiling Google's well-known types
+            continue
+
         output_package_name = proto_file.package
         if output_package_name not in request_data.output_packages:
             # Create a new output if there is no output for this package
