@@ -4,7 +4,7 @@ version = "2.0.0b6"
 description = "A better Protobuf / gRPC generator & library"
 authors = ["Daniel G. Taylor <danielgtaylor@gmail.com>"]
 readme = "README.md"
-repository = "https://github.com/danielgtaylor/python-betterproto"
+repository = "https://github.com/beam-cloud/python-betterproto"
 keywords = ["protobuf", "gRPC"]
 license = "MIT"
 packages = [
@@ -46,7 +46,7 @@ cachelib = "^0.10.2"
 tomlkit = ">=0.7.0"
 
 [tool.poetry.scripts]
-protoc-gen-python_betterproto = "betterproto.plugin:main"
+protoc-gen-python_betterproto_beta9 = "betterproto.plugin:main"
 
 [tool.poetry.extras]
 compiler = ["black", "isort", "jinja2"]
